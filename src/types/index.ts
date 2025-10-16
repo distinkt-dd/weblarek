@@ -33,16 +33,17 @@ export interface IApi {
     post<T extends object>(uri: string, data: object, method?: ApiPostMethods): Promise<T>;
 }
 
-export type IOrderResult = {
+export interface IOrderResult {
     id: string,
     total: number
 }
 
-export type IOrderRequest = IBuyer & {
-    items: string[]
+export interface IOrderRequest extends IBuyer {
+    items: string[],
+    total: number,
 }
 
-export type IProductListResponse = {
+export interface IProductListResponse {
     total: number;
     items: IProduct[];
 }

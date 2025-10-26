@@ -20,10 +20,6 @@ export class CardPreview extends Card<TCardPreview>{
   constructor(container: HTMLElement, action?: ICardActions) {
     super(container);
 
-    console.log('Container HTML:', container.outerHTML);
-    console.log('Found .card__text:', container.querySelector('.card__text'));
-    console.log('Found .card__button:', container.querySelector('.card__button'));
-
     this.descriptionElement = ensureElement<HTMLElement>('.card__text', this.container)
     this.cardBuyButton = ensureElement<HTMLButtonElement>('.card__button', this.container)
     this.imageElement = ensureElement<HTMLImageElement>('.card__image', this.container)

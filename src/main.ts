@@ -13,7 +13,13 @@ import {CardPreview} from "./components/Views/CardPreview.ts";
 import {Header} from "./components/Views/Header.ts";
 import {BasketView} from "./components/Views/BasketView.ts";
 import {CardBasket} from "./components/Views/CardBasket.ts";
-import {IProduct} from "./types";
+import {IProduct, IOrderRequest} from "./types";
+import {Buyer} from "./components/Models/Buyer.ts";
+import { OrderForm } from "./components/Views/OrderForm.ts";
+import { ContactsForm } from "./components/Views/ContactsForm.ts";
+import { Success } from "./components/Views/Success.ts";
+
+
 
 // templates & blocks
 
@@ -22,6 +28,9 @@ const cardPreviewTemplate = ensureElement<HTMLTemplateElement>('#card-preview')
 const basketTemplate = ensureElement<HTMLTemplateElement>('#basket')
 const modalContainer = ensureElement<HTMLElement>('#modal-container')
 const cardBasketTemplate = ensureElement<HTMLTemplateElement>('#card-basket')
+const orderTemplate = ensureElement<HTMLTemplateElement>('#order');
+const contactsTemplate = ensureElement<HTMLTemplateElement>('#contacts');
+const successTemplate = ensureElement<HTMLTemplateElement>('#success');
 
 
 // api & models
@@ -41,12 +50,13 @@ const basket = new BasketView(cloneTemplate(basketTemplate), {
     events.emit('basket:orderNew')
   }
 })
+
+const buyerModel = new Buyer()
 // Получение данных о товарах с сервера
 
 async function getProductsServer() {
   try {
     const products = await larekAPI.getProductList();
-    console.dir(products);
     productCatalog.setProducts(products);
   } catch (error) {
     console.error(error);
@@ -157,33 +167,33 @@ events.on('basket:open', () => {
 })
 
 events.on('basket-list:change', (products: IProduct[]) => {
-    console.dir(products)
+  const cards = products.map((product, index) => {
+    const cardElement = cloneTemplate(cardBasketTemplate);
+    const card = new CardBasket(cardElement, {
+      onClick: () => {
+        events.emit('basket:deleteProduct', product);
+      }
+    });
+    return card.render({
+      title: product.title,
+      price: product.price,
+      index: index
+    });
+  });
 
-    const cards = products.map((product, index) => {
-      const cardElement = cloneTemplate(cardBasketTemplate)
-      const card = new CardBasket(cardElement, {
-        onClick: () => {
-          events.emit('basket:deleteProduct', product)
-        }
-      })
-      return card.render({
-        title: product.title,
-        price: product.price,
-        index: index
-      })
+  const isEmpty = cards.length === 0;
+  const totalPrice = String(basketModel.basketCost());
+
+  modal.render({
+    content: basket.render({
+      content: isEmpty ? ['Корзина пуста'] : cards,
+      price: totalPrice,
+      disabled: isEmpty
     })
+  });
 
-  console.dir(cards)
-    if(cards.length > 0) {
-      modal.render({content: basket.render({content: cards, price: String(basketModel.basketCost())})})
-    } else {
-      console.dir('tur')
-      modal.render({content: basket.render({content: ['Корзина пуста'], price: '0'})})
-    }
-
-    header.render({counter: basketModel.getProductsCart().length})
-
-})
+  header.render({ counter: basketModel.getProductsCart().length });
+});
 
 events.on('basket:deleteProduct', (product: IProduct) => {
   basketModel.removeProduct(product)
@@ -201,8 +211,64 @@ events.on('modal:close', () => {
 
 
 events.on('basket:orderNew', () => {
-  console.dir(basketModel.getProductsCart())
-})
+  const orderFormElement = cloneTemplate(orderTemplate);
+  const orderForm = new OrderForm(events, orderFormElement, (orderData) => {
+    buyerModel.setPayment(orderData.payment);
+    buyerModel.setAddress(orderData.address);
+
+    const contactsFormElement = cloneTemplate(contactsTemplate);
+    const contactsForm = new ContactsForm(events, contactsFormElement, async (contactsData) => {
+      buyerModel.setEmail(contactsData.email);
+      buyerModel.setPhone(contactsData.phone);
+
+      const validation = buyerModel.validate();
+      if (validation.isValid) {
+        try {
+          // Создаем объект заказа согласно структуре из Postman
+          const orderRequest: IOrderRequest = {
+            ...buyerModel.getData(),
+            total: basketModel.basketCost(),
+            items: basketModel.getProductsCart().map(item => item.id)
+          };
+
+
+          // Отправляем заказ на сервер
+          const result = await larekAPI.submitOrder(orderRequest);
+
+          // Показываем успешное сообщение с ID заказа
+          const successElement = cloneTemplate(successTemplate);
+          const success = new Success(successElement, events);
+          success.render({ total: result.total });
+
+          modal.render({ content: success.container });
+
+          // Очищаем корзину и данные покупателя ПОСЛЕ успешной отправки
+          basketModel.clearingCart();
+          buyerModel.clear();
+
+          // Обновляем счетчик в хедере
+          header.render({ counter: 0 });
+
+        } catch (error) {
+          console.error('Ошибка при оформлении заказа:', error);
+          alert('Произошла ошибка при оформлении заказа. Попробуйте еще раз.');
+        }
+      } else {
+        const errorMessages = Object.values(validation.errors);
+        alert(`Ошибки заполнения формы:\n${errorMessages.join('\n')}`);
+      }
+    });
+
+    modal.render({ content: contactsForm.container });
+  });
+
+  modal.render({ content: orderForm.container });
+  modal.open();
+});
+
+events.on('success:close', () => {
+  modal.close();
+});
 
 getProductsServer();
 

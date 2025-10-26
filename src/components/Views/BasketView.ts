@@ -1,5 +1,5 @@
-import {Component} from "../base/Component.ts";
-import {ensureElement} from "../../utils/utils.ts";
+import { Component } from "../base/Component.ts";
+import { ensureElement } from "../../utils/utils.ts";
 
 export interface IBasketActions {
   onClick: (event: MouseEvent) => void;
@@ -8,40 +8,48 @@ export interface IBasketActions {
 export interface IBasketView {
   price: string;
   content: HTMLElement[] | string[];
+  disabled: boolean;
 }
 
-export class BasketView extends Component<IBasketView>{
+export class BasketView extends Component<IBasketView> {
   protected basketList: HTMLUListElement;
-  protected basketPrice: HTMLElement
+  protected basketPrice: HTMLElement;
   protected basketNewOrder: HTMLButtonElement;
 
   constructor(protected container: HTMLElement, actions?: IBasketActions) {
     super(container);
-    this.basketPrice = ensureElement<HTMLElement>('.basket__price', this.container)
-    this.basketList = ensureElement<HTMLUListElement>('.basket__list', this.container)
-    this.basketNewOrder = ensureElement<HTMLButtonElement>('.basket__button', this.container)
+    this.basketPrice = ensureElement<HTMLElement>('.basket__price', this.container);
+    this.basketList = ensureElement<HTMLUListElement>('.basket__list', this.container);
+    this.basketNewOrder = ensureElement<HTMLButtonElement>('.basket__button', this.container);
 
-    if(actions?.onClick) {
+    if (actions?.onClick) {
       this.basketNewOrder.addEventListener('click', actions.onClick);
     }
   }
 
-  protected set price(value: string) {
-    this.basketPrice.textContent = value + " " + 'синапсов';
+  set price(value: string) {
+    this.basketPrice.textContent = value + " синапсов";
   }
 
-  protected set content(items: HTMLElement[] | string[]) {
-    if(items.length > 0) {
-      this.basketList.textContent = ''
-      this.basketList.replaceChildren(...items)
-
-      if(this.basketList.textContent === items[0]) {
-        this.basketNewOrder.disabled = true;
+  set content(items: HTMLElement[] | string[]) {
+    if (items.length > 0) {
+      this.basketList.innerHTML = '';
+      if (typeof items[0] === 'string') {
+        this.basketList.textContent = items[0] as string;
       } else {
-        this.basketNewOrder.disabled = false;
+        this.basketList.replaceChildren(...(items as HTMLElement[]));
       }
+    } else {
+      this.basketList.textContent = 'Корзина пуста';
     }
-
   }
 
+  set disabled(value: boolean) {
+    this.basketNewOrder.disabled = value;
+    if (value) {
+      this.basketNewOrder.classList.add('button_disabled');
+    } else {
+      this.basketNewOrder.classList.remove('button_disabled');
+    }
+  }
 }

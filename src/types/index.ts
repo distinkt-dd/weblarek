@@ -12,11 +12,10 @@ export interface IProduct {
 }
 
 export interface IBuyer {
-    payment: string;
-    email: string;
-    phone: string;
-    address: string;
-    total: number,
+  payment: string;    // 'online' или 'при получении'
+  email: string;
+  phone: string;
+  address: string;
 }
 
 export interface Validation {
@@ -35,12 +34,17 @@ export interface IApi {
 }
 
 export interface IOrderResult {
-    id: string,
-    total: number
+  id: string;
+  total: number;
 }
 
-export interface IOrderRequest extends IBuyer {
-    items: string[],
+export interface IOrderRequest {
+  payment: string;
+  email: string;
+  phone: string;
+  address: string;
+  total: number;
+  items: string[];
 }
 
 export interface IProductListResponse {

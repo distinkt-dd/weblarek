@@ -30,7 +30,17 @@ export class OrderForm extends Form<IOrderFormData> {
   }
 
   private selectPayment(payment: string): void {
-    this.selectedPayment = payment;
+    // Преобразуем в значения, которые ожидает сервер
+    let serverPayment: string;
+    if (payment === 'card') {
+      serverPayment = 'online';
+    } else if (payment === 'cash') {
+      serverPayment = 'при получении';
+    } else {
+      serverPayment = payment;
+    }
+
+    this.selectedPayment = serverPayment;
 
     // Обновляем стили кнопок
     this.paymentButtons.forEach(btn => {

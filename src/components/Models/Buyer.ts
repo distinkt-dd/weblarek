@@ -1,21 +1,20 @@
-import {IBuyer, Validation} from "../../types";
+import { IBuyer, Validation } from "../../types";
 
-export class Buyer
-{
+export class Buyer {
   private payment: string | null;
   private email: string;
   private phone: string;
   private address: string;
 
   constructor() {
-    this.payment = null
-    this.email = ''
-    this.phone = ''
-    this.address = ''
+    this.payment = null;
+    this.email = '';
+    this.phone = '';
+    this.address = '';
   }
 
   setPayment(payment: string) {
-    this.payment = payment
+    this.payment = payment;
   }
 
   setEmail(email: string) {
@@ -36,7 +35,7 @@ export class Buyer
       email: this.email,
       phone: this.phone,
       address: this.address,
-    }
+    };
   }
 
   clear() {
@@ -47,30 +46,27 @@ export class Buyer
   }
 
   validate(): Validation {
-    const errors: Validation['errors'] = {}
+    const errors: Validation['errors'] = {};
 
-    if(!this.payment || this.payment.trim() === '') {
-      errors.payment = 'Выберите способ оплаты!'
+    if (!this.payment || this.payment.trim() === '') {
+      errors.payment = 'Выберите способ оплаты!';
     }
 
-    if(!this.email || this.email.trim() === '') {
-      errors.email = 'Напишите свою почту!'
+    if (!this.email || this.email.trim() === '') {
+      errors.email = 'Напишите свою почту!';
     }
 
-    if(!this.address || this.address.trim() === '') {
-      errors.address = 'Поле адреса обязательно к заполнению!'
+    if (!this.address || this.address.trim() === '') {
+      errors.address = 'Поле адреса обязательно к заполнению!';
     }
 
-    if(!this.phone || this.phone.trim() === '') {
-      errors.phone = 'Заполните поле с телефоном!'
+    if (!this.phone || this.phone.trim() === '') {
+      errors.phone = 'Заполните поле с телефоном!';
     }
-
 
     return {
       isValid: Object.keys(errors).length === 0,
       errors
-    }
-
+    };
   }
-
 }

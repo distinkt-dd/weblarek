@@ -1,4 +1,4 @@
-import { IApi, IProduct, IOrderRequest, IOrderResult, IProductListResponse, IBuyer} from '../../types'
+import { IApi, IProduct, IOrderRequest, IOrderResult, IProductListResponse} from '../../types'
 
 export class LarekApi {
   private api: IApi;
@@ -16,10 +16,4 @@ export class LarekApi {
     return await this.api.post('/order/', orderData)
   }
 
-  createOrderRequest(buyerData: IBuyer, productIds: string[]): IOrderRequest {
-    return {
-      ...buyerData,
-      items: productIds
-    }
-  }
 }

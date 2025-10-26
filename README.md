@@ -200,3 +200,128 @@ Presenter - презентер содержит основную логику п
 - `async submitOrder(orderData: IOrderRequest): Promise<IOrderResult>` - отправляет данные покупателя и корзины на сервер для дальнейшей обработки
 - `createOrderRequest(buyerData: IBuyer, productIds: string[]): IOrderRequest` - создание объекта данных для отправки на сервер
 
+# Модели представления и события в main.ts
+## Card(базовый класс)
+`Назначение` - Базовый класс для карточек товаров
+
+### Поля:
+
+- `cardTitle: HTMLElement` - заголовок карточки
+- `cardPrice: HTMLElement` - цена товара
+
+
+## CardCatalog
+`Назначение` - Карточка товара в каталоге
+`Наследует:` - Card`<TCardCatalog>`
+
+### Поля:
+
+- `imageElement: HTMLImageElement` - изображение товара
+- `categoryElement: HTMLElement` - категория товара
+
+
+## CardPreview
+`Назначение` - Детальная карточка товара в модальном окне
+`Наследует:` - Card`<TCardPreview>`
+
+### Поля:
+
+- `descriptionElement: HTMLElement` - описание товара
+- `cardBuyButton: HTMLButtonElement` - кнопка покупки
+
+## CardBasket
+`Назначение` - Карточка товара в корзине
+`Наследует:` - Card`<TCardBasket>`
+
+### Поля:
+
+- `indexElement: HTMLElement` - индекс товара
+- `delButtonElement: HTMLButtonElement` - кнопка удаления
+
+## BasketView
+`Назначение` - Представление корзины покупок
+
+### Поля:
+
+- `basketList: HTMLUListElement` - список товаров
+- `basketPrice: HTMLElement` - общая стоимость
+- `basketNewOrder: HTMLButtonElement` - кнопка оформления заказа
+
+## Modal
+`Назначение` - Управление модальными окнами
+
+### Поля:
+
+- `buttonClose: HTMLButtonElement` - кнопка закрытия
+- `contentElement: HTMLElement` - контент модального окна
+
+### Методы:
+
+- `open(): void` - открытие модального окна
+- `close(): void` - закрытие модального окна
+
+
+## Form (Абстрактный класс)
+`Назначение` - Базовый класс для форм
+
+### Методы:
+
+- `protected validate(): boolean` - абстрактный метод валидации
+- `protected getFormData(): T` - абстрактный метод получения данных
+- `setErrors(messages: string[]): void` - установка ошибок
+- `setValid(valid: boolean): void` - установка валидности
+
+
+## OrderForm
+`Назначение` - Форма оформления заказа
+`Наследует:` - Form`<IOrderFormData>`
+
+## ContactsForm
+`Назначение` - Форма контактных данных
+`Наследует:` - Form`<IContactsFormData>`
+
+### Основные события:
+
+#### Каталог товаров:
+
+- `products:changed` - изменение списка товаров
+
+- `card:selected` - выбор карточки товара
+
+- `product:selected` - выбор товара для просмотра
+
+- `product:toBasket` - добавление товара в корзину
+
+#### Корзина:
+- `basket:open` - открытие корзины
+
+- `basket:deleteProduct` - удаление товара из корзины
+
+- `basket-list:change` - изменение содержимого корзины
+
+- `basket:orderNew` - начало оформления заказа
+
+#### Модальные окна:
+- `modal:close` - закрытие модального окна
+
+- `success:close` - закрытие окна успешного заказа
+
+### Основные конструкторы слоя представления:
+
+`constructor(protected container: HTMLElement, actions?: TYPE)`:
+
+- container - определяет HTMLElement, в котором будет генерироваться контент
+- actions - параметр для передачи события с данными, например: данные о товаре
+
+`constructor(container: HTMLElement, protected events: IEvents)`:
+- events - используется для инициализации события и его обработке
+
+### Формула работы с данными (MVP архитектура):
+
+- Слой представления = V
+- Слой коммуникации = P
+- Слой данных - M
+
+## Формула:
+
+- V-P-M-P-V

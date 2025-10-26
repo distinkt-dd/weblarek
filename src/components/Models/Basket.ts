@@ -1,12 +1,19 @@
 import {IProduct} from "../../types";
 import {IEvents} from "../base/Events.ts";
 
-
 export class Basket {
   private products: IProduct[];
 
   constructor(protected events: IEvents) {
-    this.products = [] // Для товаров в корзине
+    this.products = [];
+    // Инициализируем корзину при создании
+    setTimeout(() => {
+      this.events.emit('basket:changed');
+    }, 0);
+  }
+
+  init() {
+    this.events.emit('basket:changed');
   }
 
   getProductsCart(): IProduct[] {
@@ -15,11 +22,12 @@ export class Basket {
 
   setProductCart(product: IProduct) {
     this.products.push(product)
-    this.events.emit('basket-list:change', this.products)
+    this.events.emit('basket:changed');
   }
 
   clearingCart() {
     this.products = []
+    this.events.emit('basket:changed');
   }
 
   removeProduct(product: IProduct) {
@@ -27,7 +35,7 @@ export class Basket {
     if(index !== -1) {
       this.products.splice(index, 1);
     }
-    this.events.emit('basket-list:change', this.products)
+    this.events.emit('basket:changed');
   }
 
   basketCost(): number {
@@ -43,5 +51,4 @@ export class Basket {
   productInCart(productId: string): boolean {
     return this.products.some(product => product.id === productId)
   }
-
 }

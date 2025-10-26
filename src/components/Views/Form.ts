@@ -7,14 +7,15 @@ export interface IFormState {
   errors: string[];
 }
 
-export abstract class Form<T> extends Component<T> {
+export abstract class Form<T> extends Component<IFormState> {
   protected submitButton: HTMLButtonElement;
   protected errorsContainer: HTMLElement;
+  protected _valid: boolean = false; // Добавляем внутреннее состояние
 
   constructor(
     protected events: IEvents,
     container: HTMLElement,
-    protected onSubmit: (data: T) => void
+    protected eventName: string
   ) {
     super(container);
 
@@ -22,28 +23,28 @@ export abstract class Form<T> extends Component<T> {
     this.errorsContainer = ensureElement<HTMLElement>('.form__errors', this.container);
 
     this.container.addEventListener('submit', this.handleSubmit.bind(this));
-    this.container.addEventListener('input', this.handleInput.bind(this));
   }
 
   protected handleSubmit(event: Event): void {
     event.preventDefault();
-    if (this.validate()) {
-      this.onSubmit(this.getFormData());
-    }
+    this.events.emit(this.eventName);
   }
 
-  protected handleInput(): void {
-    this.validate();
+  set valid(value: boolean) {
+    this._valid = value; // Сохраняем состояние
+    this.submitButton.disabled = !value;
   }
 
-  protected setErrors(messages: string[]): void {
-    this.errorsContainer.textContent = messages.join(', ');
+  get valid(): boolean {
+    return this._valid; // Возвращаем сохраненное состояние
   }
 
-  protected setValid(valid: boolean): void {
-    this.submitButton.disabled = !valid;
+  set errors(value: string[]) {
+    this.errorsContainer.textContent = value.join(', ');
   }
 
-  protected abstract validate(): boolean;
-  protected abstract getFormData(): T;
+  clear(): void {
+    this.valid = false;
+    this.errors = [];
+  }
 }

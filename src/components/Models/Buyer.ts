@@ -1,37 +1,37 @@
 import { IBuyer, Validation } from "../../types";
+import { IEvents } from "../base/Events.ts";
 
 export class Buyer {
-  private payment: string | null;
-  private email: string;
-  private phone: string;
-  private address: string;
+  private payment: string = '';
+  private email: string = '';
+  private phone: string = '';
+  private address: string = '';
 
-  constructor() {
-    this.payment = null;
-    this.email = '';
-    this.phone = '';
-    this.address = '';
-  }
+  constructor(private events: IEvents) {}
 
   setPayment(payment: string) {
     this.payment = payment;
+    this.events.emit('buyer:changed', this.getData());
   }
 
   setEmail(email: string) {
     this.email = email;
+    this.events.emit('buyer:changed', this.getData());
   }
 
   setPhone(phone: string) {
     this.phone = phone;
+    this.events.emit('buyer:changed', this.getData());
   }
 
   setAddress(address: string) {
     this.address = address;
+    this.events.emit('buyer:changed', this.getData());
   }
 
   getData(): IBuyer {
     return {
-      payment: this.payment!,
+      payment: this.payment,
       email: this.email,
       phone: this.phone,
       address: this.address,
@@ -39,10 +39,12 @@ export class Buyer {
   }
 
   clear() {
-    this.payment = null;
+    this.payment = '';
     this.email = '';
     this.phone = '';
     this.address = '';
+    this.events.emit('buyer:changed', this.getData());
+    this.events.emit('buyer:cleared');
   }
 
   validate(): Validation {

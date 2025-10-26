@@ -1,156 +1,209 @@
 import './scss/styles.scss';
-import {apiProducts} from './utils/data.ts'
 import {ProductsCatalog} from "./components/Models/ProductCatalog.ts";
-import {Cart} from "./components/Models/Cart.ts";
-import {Buyer} from "./components/Models/Buyer.ts";
-import {API_URL} from "./utils/constants.ts";
+import {Basket} from "./components/Models/Basket.ts";
+import {API_URL, CDN_URL} from "./utils/constants.ts";
 import {Api} from "./components/base/Api.ts";
 import {LarekApi} from "./components/base/LarekApi.ts";
+import {EventEmitter} from "./components/base/Events.ts";
+import {CardCatalog} from "./components/Views/CardCatalog.ts";
+import {cloneTemplate, ensureElement} from "./utils/utils.ts";
+import {Gallery} from "./components/Views/Gallery.ts";
+import {Modal} from "./components/Views/Modal.ts";
+import {CardPreview} from "./components/Views/CardPreview.ts";
+import {Header} from "./components/Views/Header.ts";
+import {BasketView} from "./components/Views/BasketView.ts";
+import {CardBasket} from "./components/Views/CardBasket.ts";
+import {IProduct} from "./types";
 
-// Тесты модели Product catalog
+// templates & blocks
 
-const productsModel = new ProductsCatalog()
-const data = apiProducts.items
-
-console.log("Тестовые данные(псевдо api): ", apiProducts )
-
-// Добавление данных о товаре в модель
-
-productsModel.setProducts(data)
-console.log("Добавление данных в массив products: ", productsModel)
-
-// Получение данных о товарах из модели
-
-const newData = productsModel.getProducts()
-console.log("Полученный массив данных из модели: ", newData)
-
-// Получение данных о товаре по id
-
-const getProductDataById = productsModel.getProductById('b06cde61-912f-4663-9751-09956c0eed67')
-console.log('Получение данных о товаре по id "b06cde61-912f-4663-9751-09956c0eed67": ', getProductDataById)
-
-// сохранение товара для подробного отображения
-
-productsModel.setSelectedProduct(data[2])
-console.log('Сохраненные данные о выбранном товаре: ', productsModel)
-
-// Получение данных о выбранном товаре
-
-const dataSelected = productsModel.getSelectedProduct()
-console.log('Данные о выбранном товаре', dataSelected)
-
-// Тесты модели Cart
-
-// Создание экземпляра cart с мок данными
-const cartModel = new Cart(productsModel.getProducts()) // Помещаю в корзину хоть какие то мок данные
-console.log('Тест данные для корзины: ', cartModel)
-
-// Получение данных из корзины
-
-const cartData = cartModel.getProductsCart()
-console.log('Полученные данные из корзины: ', cartData)
-
-// Добавление продукта в список
-
-cartModel.setProductCart({
-  id: '123',
-  description: 'test',
-  image: 'fake src/',
-  title: 'test title',
-  category: 'test category',
-  price: 123
-})
-console.log('Список товаров в корзине после добавления внутрь нового товара', cartModel.getProductsCart())
-
-// Удаление определенного товара из корзины
-
-cartModel.removeProduct({
-  id: '123',
-  description: 'test',
-  image: 'fake src/',
-  title: 'test title',
-  category: 'test category',
-  price: 123
-})
-console.log('Список товаров в корзине после удаления элемента с id 123', cartModel.getProductsCart())
-
-// расчет суммы всех товаров в корзине
-
-const sum = cartModel.cartCost()
-console.log('Сумма товаров в корзине', sum)
-
-// Определение кол-ва товаров в корзине
-
-const quantity = cartModel.quantityProductsCart()
-console.log('Кол-во товаров в корзине: ', quantity)
-
-// определение наличия товара в корзине по его идентификатору
-
-const hasProduct = cartModel.productInCart('b06cde61-912f-4663-9751-09956c0eed67')
-console.log('Товар с id b06cde61-912f-4663-9751-09956c0eed67 найден?: ', hasProduct)
-
-// Очистка корзины
-
-cartModel.clearingCart()
-console.log('Массив товаров после полной очистки: ', cartModel.getProductsCart())
-
-// Тест модели buyer
-
-// Создание экземпляра класса Buyer
-const buyer = new Buyer()
-console.log('Объект buyer со стоковыми/пустыми данными', buyer)
-
-// Добавление email, phone, address, payment для buyer
-
-buyer.setPhone('+79393939393')
-console.log('Добавили телефон: ',buyer)
-
-buyer.setEmail('sddss@yandex.ru')
-console.log('Добавили email: ', buyer)
-
-buyer.setPayment('online')
-console.log('Добавили способ оплаты: ',buyer)
-
-buyer.setAddress('Пушкина 34')
-console.log('Добавили адрес: ',buyer)
-
-// Получение объекта с данными
-
-const buyerObj = buyer.getData()
-console.log('Объект с заполненными данными',buyerObj)
-
-// Валидация
-
-const validateObj1 = buyer.validate()
-console.log('Полностью валидные данные', validateObj1)
-
-// Удаление данных
-
-buyer.clear()
-console.log('Данные удалились: ', buyer)
+const cardCatalogTemplate = ensureElement<HTMLTemplateElement>('#card-catalog')
+const cardPreviewTemplate = ensureElement<HTMLTemplateElement>('#card-preview')
+const basketTemplate = ensureElement<HTMLTemplateElement>('#basket')
+const modalContainer = ensureElement<HTMLElement>('#modal-container')
+const cardBasketTemplate = ensureElement<HTMLTemplateElement>('#card-basket')
 
 
-// Валидация - тест ошибок
-
-const validateObj2 = buyer.validate()
-console.log('Вернулся объект с ошибками',validateObj2)
-
-
-// Получение данных по API
-
+// api & models
 
 const api = new Api(API_URL)
-const larekApi = new LarekApi(api)
-const newProductCatalog = new ProductsCatalog()
+const larekAPI = new LarekApi(api)
+const events = new EventEmitter();
 
-try {
-  const products = await larekApi.getProductList()
-  newProductCatalog.setProducts(products)
-} catch (e) {
-  console.log(e)
+
+const productCatalog = new ProductsCatalog(events)
+const basketModel = new Basket(events)
+const gallery = new Gallery(ensureElement<HTMLElement>('.gallery'))
+const header = new Header(events,ensureElement<HTMLElement>('.header'))
+const modal = new Modal(modalContainer, events)
+const basket = new BasketView(cloneTemplate(basketTemplate), {
+  onClick: () => {
+    events.emit('basket:orderNew')
+  }
+})
+// Получение данных о товарах с сервера
+
+async function getProductsServer() {
+  try {
+    const products = await larekAPI.getProductList();
+    console.dir(products);
+    productCatalog.setProducts(products);
+  } catch (error) {
+    console.error(error);
+  }
 }
 
-console.log('Массив товаров полученных по API', newProductCatalog.getProducts())
+// События
 
+events.on('products:changed', () => {
+
+  const products = productCatalog.getProducts();
+
+  const cards = products.map(product => {
+    const cardElement = cloneTemplate(cardCatalogTemplate)
+    const card = new CardCatalog(cardElement, {
+      onClick: () => {
+        events.emit('card:selected', product);
+      }
+    })
+    return card.render({
+      title: product.title,
+      price: product.price,
+      category: product.category,
+      image: CDN_URL + product.image
+    })
+  })
+
+  gallery.render({catalog: cards})
+})
+
+events.on('card:selected', product => {
+  productCatalog.setSelectedProduct(product)
+})
+
+events.on('product:selected', () => {
+  const modal = new Modal(modalContainer, events)
+  const selectedProduct = productCatalog.getSelectedProduct();
+
+  const isInBasket = basketModel.productInCart(selectedProduct?.id)
+
+  // Определяем текст кнопки и действие
+  const { buttonText, action } = getButtonConfig(selectedProduct, isInBasket);
+
+  const card = new CardPreview(cloneTemplate(cardPreviewTemplate), {
+    onClick: () => {
+      modal.close()
+      handleProductAction(action, selectedProduct, events);
+    }
+  })
+
+  const cardRender = card.render({
+    title: selectedProduct?.title,
+    image: CDN_URL + selectedProduct?.image,
+    price: selectedProduct?.price,
+    category: selectedProduct?.category,
+    description: selectedProduct?.description,
+    buttonText: buttonText
+  })
+
+  modal.render({content: cardRender})
+  modal.open()
+})
+
+// Вспомогательные функции
+function getButtonConfig(product: IProduct | null, isInBasket: boolean): { buttonText: string; action: 'add' | 'remove' | 'none' } {
+  if (!product) return { buttonText: 'Недоступно', action: 'none' };
+
+  if (isInBasket) {
+    return { buttonText: 'Удалить из корзины', action: 'remove' };
+  } else if (product.price) {
+    return { buttonText: 'В корзину', action: 'add' };
+  } else {
+    return { buttonText: 'Недоступно', action: 'none' };
+  }
+}
+
+function handleProductAction(action: 'add' | 'remove' | 'none', product: IProduct | null, events: EventEmitter): void {
+  switch (action) {
+    case 'add':
+      events.emit('product:toBasket', product);
+      break;
+    case 'remove':
+      events.emit('basket:deleteProduct', product);
+      break;
+    case 'none':
+      // Ничего не делаем для недоступных товаров
+      break;
+  }
+}
+
+events.on('product:toBasket', product => {
+  basketModel.setProductCart(product)
+  const counter = basketModel.getProductsCart().length
+  header.render({counter: counter})
+})
+
+events.on('basket:open', () => {
+  const basketList = basketModel.getProductsCart()
+  if(basketList.length === 0) {
+    modal.render({content: basket.render({content: ['Корзина пуста']})})
+  } else {
+    modal.render({content: basket.render()})
+  }
+
+
+
+  modal.open()
+})
+
+events.on('basket-list:change', (products: IProduct[]) => {
+    console.dir(products)
+
+    const cards = products.map((product, index) => {
+      const cardElement = cloneTemplate(cardBasketTemplate)
+      const card = new CardBasket(cardElement, {
+        onClick: () => {
+          events.emit('basket:deleteProduct', product)
+        }
+      })
+      return card.render({
+        title: product.title,
+        price: product.price,
+        index: index
+      })
+    })
+
+  console.dir(cards)
+    if(cards.length > 0) {
+      modal.render({content: basket.render({content: cards, price: String(basketModel.basketCost())})})
+    } else {
+      console.dir('tur')
+      modal.render({content: basket.render({content: ['Корзина пуста'], price: '0'})})
+    }
+
+    header.render({counter: basketModel.getProductsCart().length})
+
+})
+
+events.on('basket:deleteProduct', (product: IProduct) => {
+  basketModel.removeProduct(product)
+})
+
+events.on('modal:close', () => {
+  const selectedProduct = productCatalog.getSelectedProduct()
+  if(selectedProduct) {
+    productCatalog.deleteSelectedProduct()
+  }
+})
+
+
+
+
+
+events.on('basket:orderNew', () => {
+  console.dir(basketModel.getProductsCart())
+})
+
+getProductsServer();
 
 

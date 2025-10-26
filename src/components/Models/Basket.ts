@@ -1,10 +1,12 @@
 import {IProduct} from "../../types";
+import {IEvents} from "../base/Events.ts";
 
-export class Cart {
+
+export class Basket {
   private products: IProduct[];
 
-  constructor(productsList: IProduct[]) {
-    this.products = productsList // Для товаров в корзине
+  constructor(protected events: IEvents) {
+    this.products = [] // Для товаров в корзине
   }
 
   getProductsCart(): IProduct[] {
@@ -13,6 +15,7 @@ export class Cart {
 
   setProductCart(product: IProduct) {
     this.products.push(product)
+    this.events.emit('basket-list:change', this.products)
   }
 
   clearingCart() {
@@ -24,9 +27,10 @@ export class Cart {
     if(index !== -1) {
       this.products.splice(index, 1);
     }
+    this.events.emit('basket-list:change', this.products)
   }
 
-  cartCost(): number {
+  basketCost(): number {
     return this.products.reduce((acc, product) => {
       return acc + (product.price || 0)
     }, 0)

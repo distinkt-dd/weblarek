@@ -16,6 +16,7 @@ export interface IBuyer {
     email: string;
     phone: string;
     address: string;
+    total: number,
 }
 
 export interface Validation {
@@ -40,7 +41,6 @@ export interface IOrderResult {
 
 export interface IOrderRequest extends IBuyer {
     items: string[],
-    total: number,
 }
 
 export interface IProductListResponse {

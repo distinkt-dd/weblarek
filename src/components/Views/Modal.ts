@@ -10,14 +10,12 @@ export interface IModal {
 export class Modal extends Component<IModal>{
   protected buttonClose: HTMLButtonElement;
   protected contentElement: HTMLElement;
-  protected pageWrapper: HTMLElement;
   constructor(container: HTMLElement, protected events: IEvents) {
     super(container)
 
     this.buttonClose = ensureElement<HTMLButtonElement>('.modal__close', this.container)
     this.contentElement = ensureElement<HTMLElement>('.modal__content', this.container)
 
-    this.pageWrapper = document.querySelector('.page__wrapper') as HTMLElement
     this.buttonClose.addEventListener('click', () => {
       this.close()
     })
@@ -31,14 +29,11 @@ export class Modal extends Component<IModal>{
   }
 
   open() {
-
     this.container.classList.add('modal_active');
-    this.pageWrapper.classList.add('page__wrapper_locked')
   }
 
   close() {
     this.container.classList.remove('modal_active');
-    this.pageWrapper.classList.remove('page__wrapper_locked')
     this.events.emit('modal:close')
   }
 

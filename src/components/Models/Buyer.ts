@@ -11,22 +11,34 @@ export class Buyer {
 
   setPayment(payment: string) {
     this.payment = payment;
-    this.events.emit('buyer:changed', this.getData());
+    this.events.emit('orderForm:validate', {
+      data: this.getData(),
+      validate: this.validate()
+    });
   }
 
   setEmail(email: string) {
     this.email = email;
-    this.events.emit('buyer:changed', this.getData());
+    this.events.emit('contactsForm:validate', {
+      data: this.getData(),
+      validate: this.validate()
+    });
   }
 
   setPhone(phone: string) {
     this.phone = phone;
-    this.events.emit('buyer:changed', this.getData());
+    this.events.emit('contactsForm:validate', {
+      data: this.getData(),
+      validate: this.validate()
+    });
   }
 
   setAddress(address: string) {
     this.address = address;
-    this.events.emit('buyer:changed', this.getData());
+    this.events.emit('orderForm:validate', {
+      data: this.getData(),
+      validate: this.validate()
+    });
   }
 
   getData(): IBuyer {

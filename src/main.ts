@@ -13,7 +13,7 @@ import {CardPreview} from "./components/Views/CardPreview.ts";
 import {Header} from "./components/Views/Header.ts";
 import {BasketView} from "./components/Views/BasketView.ts";
 import {CardBasket} from "./components/Views/CardBasket.ts";
-import {IProduct, IOrderRequest} from "./types";
+import {IProduct, IOrderRequest, IBuyer} from "./types";
 import {Buyer} from "./components/Models/Buyer.ts";
 import { OrderForm } from "./components/Views/OrderForm.ts";
 import { ContactsForm } from "./components/Views/ContactsForm.ts";
@@ -150,7 +150,7 @@ events.on('basket:deleteProduct', (product: IProduct) => {
 })
 
 events.on('basket:open', () => {
-  modal.render({ content: basketView.container });
+  modal.render({ content: basketView.render()});
   modal.open();
 })
 
@@ -180,107 +180,101 @@ events.on('basket:changed', () => {
   header.render({ counter: products.length });
 })
 
-// Валидация OrderForm
-events.on('order:payment:changed', () => {
-  validateOrderForm();
-});
-
-events.on('order:input', () => {
-  validateOrderForm();
-});
-
-function validateOrderForm(): void {
-  const paymentValue = orderForm.payment;
-  const addressValue = orderForm.address;
-
-  const hasPayment = !!paymentValue && paymentValue.trim() !== '';
-  const hasAddress = !!addressValue && addressValue.trim() !== '';
-
-  const errors: string[] = [];
-  if (!hasPayment) errors.push('Выберите способ оплаты');
-  if (!hasAddress) errors.push('Введите адрес доставки');
-
-  orderForm.errors = errors;
-  orderForm.valid = errors.length === 0;
-}
-
-// Валидация ContactsForm
-events.on('contacts:input', () => {
-  validateContactsForm();
-});
-
-function validateContactsForm(): void {
-  const hasEmail = !!contactsForm.email && contactsForm.email.trim() !== '';
-  const hasPhone = !!contactsForm.phone && contactsForm.phone.trim() !== '';
-
-  const errors: string[] = [];
-  if (!hasEmail) errors.push('Введите email');
-  if (!hasPhone) errors.push('Введите телефон');
-
-  contactsForm.errors = errors;
-  contactsForm.valid = errors.length === 0;
-}
-
-// Обработка отправки форм
 events.on('basket:orderNew', () => {
-  // Сбрасываем форму при каждом открытии
-  orderForm.clear();
-  buyerModel.clear();
+  const basketList = basketModel.getProductsCart()
+  if(basketList && basketList.length > 0) {
+    modal.render({content: orderForm.render()})
+  }
+  // Ничего не отчищаю, так как пользователь может случайно закрыть форму заполнения.
+  events.emit('orderForm:validate', {
+    data: buyerModel.getData(),
+    validate: buyerModel.validate()
+  })
+})
 
-  modal.render({ content: orderForm.container });
-  modal.open();
-  validateOrderForm();
-});
+events.on('orderForm:payments', data => {
+  buyerModel.setPayment(data.paymentType)
+})
+
+events.on('order:input', data => {
+  buyerModel.setAddress(data.value)
+})
+
+events.on('contacts:input', data => {
+  if(data.field === 'email') {
+    buyerModel.setEmail(data.value)
+  } else {
+    buyerModel.setPhone(data.value)
+  }
+})
+
+function validator(fields: string[], data) {
+  const stringErrors: string[] = []
+  let isValid: boolean = false
+  fields.forEach(field => {
+    if(field in data.validate.errors) {
+      stringErrors.push(data.validate.errors[field])
+    }
+  })
+
+  if(stringErrors.length === 0) {
+    isValid = true
+  }
+
+  return {
+    stringErrors,
+    isValid: !isValid
+  }
+
+}
+
+events.on('orderForm:validate', data => {
+  const validateOrderForm = validator(['payment', 'address'], data)
+  orderForm.payment = data.data['payment'];
+  orderForm.valid = validateOrderForm.isValid
+  orderForm.errors = validateOrderForm.stringErrors
+})
 
 events.on('order:submit', () => {
-  // Перед отправкой еще раз проверяем валидность
-  validateOrderForm();
+  modal.render({content: contactsForm.render()})
+  events.emit('contactsForm:validate', {
+    data: buyerModel.getData(),
+    validate: buyerModel.validate()
+  })
+})
 
-  if (orderForm.valid) {
-    // Сохраняем данные в модель
-    buyerModel.setPayment(orderForm.payment === 'card' ? 'online' : 'при получении');
-    buyerModel.setAddress(orderForm.address);
-
-    modal.render({ content: contactsForm.container });
-    validateContactsForm();
-  }
-});
+events.on('contactsForm:validate', data => {
+  const validateContactForm = validator(['email', 'phone'], data)
+  contactsForm.valid = validateContactForm.isValid;
+  contactsForm.errors = validateContactForm.stringErrors
+})
 
 events.on('contacts:submit', async () => {
-  if (contactsForm.valid) {
-    // Сохраняем данные в модель
-    buyerModel.setEmail(contactsForm.email);
-    buyerModel.setPhone(contactsForm.phone);
+  const validation = buyerModel.validate()
+  // Проверяем валидацию
+  if (validation.isValid) {
+    try {
+      const orderRequest: IOrderRequest = {
+        ...buyerModel.getData(),
+        total: basketModel.basketCost(),
+        items: basketModel.getProductsCart().map(item => item.id)
+      };
+      const result = await larekAPI.submitOrder(orderRequest);
+      modal.render({content: successView.render({total: result.total})})
 
-    const validation = buyerModel.validate();
-
-    if (validation.isValid) {
-      try {
-        const orderRequest: IOrderRequest = {
-          ...buyerModel.getData(),
-          total: basketModel.basketCost(),
-          items: basketModel.getProductsCart().map(item => item.id)
-        };
-
-        const result = await larekAPI.submitOrder(orderRequest);
-        successView.render({ total: result.total });
-        modal.render({ content: successView.container });
-
-        basketModel.clearingCart();
-        buyerModel.clear();
-        orderForm.clear();
-        contactsForm.clear();
-
-      } catch (error) {
-        console.error('Ошибка при оформлении заказа:', error);
-        alert('Произошла ошибка при оформлении заказа. Попробуйте еще раз.');
-      }
-    } else {
-      const errorMessages = Object.values(validation.errors);
-      alert(`Ошибки заполнения формы:\n${errorMessages.join('\n')}`);
+      basketModel.clearingCart()
+      buyerModel.clear()
+      orderForm.clear()
+      contactsForm.clear()
+    } catch (e) {
+      console.error('Ошибка при оформлении заказа:', error);
     }
+  } else {
+    const errorMessages = Object.values(validation.errors);
+    alert(`Ошибки заполнения формы:\n${errorMessages.join('\n')}`);
   }
-});
+
+})
 
 events.on('success:close', () => {
   modal.close();

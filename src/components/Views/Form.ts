@@ -10,7 +10,6 @@ export interface IFormState {
 export abstract class Form<T> extends Component<IFormState> {
   protected submitButton: HTMLButtonElement;
   protected errorsContainer: HTMLElement;
-  protected _valid: boolean = false; // Добавляем внутреннее состояние
 
   constructor(
     protected events: IEvents,
@@ -31,20 +30,15 @@ export abstract class Form<T> extends Component<IFormState> {
   }
 
   set valid(value: boolean) {
-    this._valid = value; // Сохраняем состояние
-    this.submitButton.disabled = !value;
+    this.submitButton.disabled = value
   }
 
-  get valid(): boolean {
-    return this._valid; // Возвращаем сохраненное состояние
-  }
 
   set errors(value: string[]) {
     this.errorsContainer.textContent = value.join(', ');
   }
 
   clear(): void {
-    this.valid = false;
     this.errors = [];
   }
 }

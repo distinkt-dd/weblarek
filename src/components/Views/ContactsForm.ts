@@ -12,20 +12,13 @@ export class ContactsForm extends Form<void> {
     this.phoneInput = ensureElement<HTMLInputElement>('input[name="phone"]', this.container);
 
     this.emailInput.addEventListener('input', () => {
-      this.events.emit('contacts:input');
+      this.events.emit('contacts:input', {field: 'email', value: this.emailInput.value.trim()});
     });
     this.phoneInput.addEventListener('input', () => {
-      this.events.emit('contacts:input');
+      this.events.emit('contacts:input', {field: 'phone', value: this.phoneInput.value.trim()});
     });
   }
 
-  get email(): string {
-    return this.emailInput.value.trim();
-  }
-
-  get phone(): string {
-    return this.phoneInput.value.trim();
-  }
 
   clear(): void {
     this.emailInput.value = '';
